@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Credit Card Fraud Detection | Jay Pathak</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050A14;color:#C8D6E5;font-family:'Inter',sans-serif;min-height:100vh;padding:24px;}
+.header{text-align:center;padding:30px 0 20px;}
+.header h1{font-size:32px;font-weight:700;color:#fff;margin-bottom:8px;}
+.header h1 span{color:#00D4FF;}
+.header p{color:#4A7FA5;font-size:14px;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1100px;margin:0 auto;}
+.card{background:#0A1628;border:1px solid #0D2137;border-radius:14px;padding:24px;}
+.card h2{font-size:14px;text-transform:uppercase;letter-spacing:2px;color:#4A7FA5;margin-bottom:20px;border-bottom:1px solid #0D2137;padding-bottom:12px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:12px;color:#4A7FA5;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;}
+.form-group input{width:100%;background:#050A14;border:1px solid #0D2137;border-radius:8px;padding:10px 14px;color:#C8D6E5;font-size:14px;outline:none;transition:border-color 0.2s;}
+.form-group input:focus{border-color:#00D4FF;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,#0066CC,#00D4FF);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
+.btn:hover{opacity:0.9;}
+.result-box{margin-top:20px;padding:20px;border-radius:10px;display:none;text-align:center;}
+.result-box.fraud{background:#1A0505;border:2px solid #FF3B3B;}
+.result-box.legit{background:#001A0A;border:2px solid #00FF88;}
+.result-label{font-size:28px;font-weight:700;margin-bottom:8px;}
+.result-label.fraud{color:#FF3B3B;}
+.result-label.legit{color:#00FF88;}
+.result-conf{font-family:'Share Tech Mono',monospace;font-size:14px;color:#4A7FA5;}
+.prob-bars{margin-top:16px;}
+.prob-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;}
+.prob-name{width:80px;color:#4A7FA5;}
+.prob-track{flex:1;height:8px;background:#0D2137;border-radius:4px;overflow:hidden;}
+.prob-fill{height:100%;border-radius:4px;transition:width 1s ease;}
+.prob-val{width:45px;text-align:right;font-family:'Share Tech Mono',monospace;font-size:12px;}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.metric-card{background:#050A14;border:1px solid #0D2137;border-radius:10px;padding:14px;text-align:center;}
+.metric-name{font-size:11px;color:#4A7FA5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.metric-val{font-family:'Share Tech Mono',monospace;font-size:22px;color:#00D4FF;}
+.model-tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:10px;margin-bottom:14px;}
+.tag-rf{background:#001F33;color:#00D4FF;border:1px solid #0D4060;}
+.tag-lr{background:#1A1000;color:#FFB800;border:1px solid #3A2800;}
+.compare-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:8px;}
+.compare-label{width:80px;color:#4A7FA5;}
+.compare-track{flex:1;height:6px;background:#0D2137;border-radius:3px;overflow:hidden;}
+.compare-bar{height:100%;border-radius:3px;}
+.bar-rf{background:#00D4FF;}
+.bar-lr{background:#FFB800;}
+.compare-val{width:40px;text-align:right;font-family:'Share Tech Mono',monospace;font-size:11px;color:#4A7FA5;}
+footer{text-align:center;margin-top:24px;font-size:12px;color:#1A3A52;font-family:'Share Tech Mono',monospace;}
+@media(max-width:768px){.grid{grid-template-columns:1fr;}.form-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💳 Credit Card Fraud <span>Detection</span></h1>
+  <p>MTech Research Project | Jay Pathak | Random Forest + SMOTE + Logistic Regression</p>
+</div>
+
+<div class="grid">
+
+  <!-- LEFT: Input Form -->
+  <div class="card">
+    <h2>🔍 Transaction Details</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Transaction Amount ($)</label>
+        <input type="number" id="transaction_amount" placeholder="e.g. 250.00" value="1500"/>
+      </div>
+      <div class="form-group">
+        <label>Time of Day (0-23)</label>
+        <input type="number" id="time_of_day" placeholder="0-23" min="0" max="23" value="2"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Merchant Category</label>
+        <input type="number" id="merchant_category" placeholder="1-10" value="7"/>
+      </div>
+      <div class="form-group">
+        <label>Distance from Home (km)</label>
+        <input type="number" id="distance_from_home" placeholder="e.g. 500" value="800"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Foreign Transaction (0/1)</label>
+        <input type="number" id="foreign_transaction" placeholder="0 or 1" min="0" max="1" value="1"/>
+      </div>
+      <div class="form-group">
+        <label>Online Transaction (0/1)</label>
+        <input type="number" id="online_transaction" placeholder="0 or 1" min="0" max="1" value="1"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Transaction Frequency</label>
+        <input type="number" id="transaction_frequency" placeholder="per day" value="15"/>
+      </div>
+      <div class="form-group">
+        <label>Account Age (days)</label>
+        <input type="number" id="account_age_days" placeholder="e.g. 365" value="30"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Previous Fraud Flag (0/1)</label>
+        <input type="number" id="prev_fraud_flag" placeholder="0 or 1" min="0" max="1" value="1"/>
+      </div>
+      <div class="form-group">
+        <label>Device Trust Score (0-10)</label>
+        <input type="number" id="device_trust_score" placeholder="0-10" value="2"/>
+      </div>
+    </div>
+    <button class="btn" onclick="predict()">🔍 Analyze Transaction</button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-label" id="result-label">--</div>
+      <div class="result-conf" id="result-conf">--</div>
+      <div class="prob-bars">
+        <div class="prob-row">
+          <span class="prob-name">Legitimate</span>
+          <div class="prob-track"><div class="prob-fill" id="legit-bar" style="width:0%;background:#00FF88;"></div></div>
+          <span class="prob-val" id="legit-val">0%</span>
+        </div>
+        <div class="prob-row">
+          <span class="prob-name">Fraudulent</span>
+          <div class="prob-track"><div class="prob-fill" id="fraud-bar" style="width:0%;background:#FF3B3B;"></div></div>
+          <span class="prob-val" id="fraud-val">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Model Metrics -->
+  <div class="card">
+    <h2>📊 Model Performance</h2>
+
+    <div style="margin-bottom:20px;">
+      <div class="model-tag tag-rf">✅ Active Model: Random Forest</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-name">Accuracy</div>
+          <div class="metric-val">{{ metrics.rf.accuracy }}%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">Precision</div>
+          <div class="metric-val">{{ metrics.rf.precision }}%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">Recall</div>
+          <div class="metric-val">{{ metrics.rf.recall }}%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">F1 Score</div>
+          <div class="metric-val">{{ metrics.rf.f1_score }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <h2>⚖️ Model Comparison</h2>
+    <div style="display:flex;gap:16px;margin-bottom:12px;font-size:11px;">
+      <span style="color:#00D4FF;">■ Random Forest</span>
+      <span style="color:#FFB800;">■ Logistic Regression</span>
+    </div>
+
+    {% for metric in ['accuracy','precision','recall','f1_score'] %}
+    <div class="compare-row">
+      <span class="compare-label">{{ metric.replace('_',' ').title() }}</span>
+      <div style="flex:1;">
+        <div class="compare-track" style="margin-bottom:3px;">
+          <div class="compare-bar bar-rf" style="width:{{ metrics.rf[metric] }}%;"></div>
+        </div>
+        <div class="compare-track">
+          <div class="compare-bar bar-lr" style="width:{{ metrics.lr[metric] }}%;"></div>
+        </div>
+      </div>
+      <div style="text-align:right;font-family:'Share Tech Mono',monospace;font-size:11px;color:#4A7FA5;width:80px;">
+        {{ metrics.rf[metric] }}% / {{ metrics.lr[metric] }}%
+      </div>
+    </div>
+    {% endfor %}
+
+    <div style="margin-top:20px;padding:14px;background:#050A14;border-radius:8px;border:1px solid #0D2137;">
+      <div style="font-size:11px;color:#4A7FA5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Research Notes</div>
+      <div style="font-size:12px;color:#C8D6E5;line-height:1.6;">
+        SMOTE applied to handle class imbalance (97:3 ratio). Random Forest outperforms Logistic Regression on all metrics. Model trained on 10,000 synthetic transactions with 10 features.
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding:14px;background:#050A14;border-radius:8px;border:1px solid #0D2137;">
+      <div style="font-size:11px;color:#4A7FA5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Published Paper</div>
+      <div style="font-size:12px;color:#C8D6E5;line-height:1.6;">
+        "AI in Cybersecurity and Digital Forensics: A Comparative Review" — IJSR, May 2026
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer><br>Built by Jay Pathak | MTech IT | Drs. Kiran & Pallavi Patel Global University | pathakjay2506-arch.github.io</footer>
+
+<script>
+const FEATURES = [
+  "transaction_amount","time_of_day","merchant_category",
+  "distance_from_home","foreign_transaction","online_transaction",
+  "transaction_frequency","account_age_days",
+  "prev_fraud_flag","device_trust_score"
+];
+
+async function predict() {
+  const data = {};
+  for (const f of FEATURES) {
+    data[f] = document.getElementById(f).value;
+  }
+
+  const res = await fetch('/predict', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+  const box = document.getElementById('result-box');
+  const label = document.getElementById('result-label');
+  const conf = document.getElementById('result-conf');
+
+  box.style.display = 'block';
+  box.className = 'result-box ' + (result.prediction === 1 ? 'fraud' : 'legit');
+  label.className = 'result-label ' + (result.prediction === 1 ? 'fraud' : 'legit');
+  label.textContent = (result.prediction === 1 ? '🚨 ' : '✅ ') + result.label;
+  conf.textContent = `Confidence: ${result.confidence}%`;
+
+  document.getElementById('legit-bar').style.width = result.legit_prob + '%';
+  document.getElementById('fraud-bar').style.width = result.fraud_prob + '%';
+  document.getElementById('legit-val').textContent = result.legit_prob + '%';
+  document.getElementById('fraud-val').textContent = result.fraud_prob + '%';
+}
+</script>
+</body>
+</html>
